@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+  <title>BEAT//BACK 节拍反击</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main id="shell">
+    <canvas id="game" width="1440" height="810" aria-label="节拍射击游戏"></canvas>
+    <section id="intro" class="overlay">
+      <div class="intro-card">
+        <div class="eyebrow">SIGNAL DEFENCE // 126 BPM</div>
+        <h1>BEAT<span>//</span>BACK</h1>
+        <p>把节拍装进炮塔。扫描线经过音符时，炮塔就会向入侵者开火。</p>
+        <div class="howto">
+          <div><b>01</b><span>点击底部轨道<br>选择炮塔</span></div>
+          <div><b>02</b><span>点击右侧节奏卡<br>替换射击节拍</span></div>
+          <div><b>03</b><span>空格键 / ⚡<br>释放过载</span></div>
+        </div>
+        <button id="start">接入信号</button>
+        <small>建议开启声音 · 触屏和鼠标均可游玩</small>
+      </div>
+    </section>
+    <section id="gameover" class="overlay hidden">
+      <div class="intro-card compact">
+        <div class="eyebrow">SIGNAL LOST</div>
+        <h2>防线失守</h2>
+        <p id="finalScore">抵达 LEVEL 1</p>
+        <button id="restart">重新接入</button>
+      </div>
+    </section>
+    <button id="mute" aria-label="切换声音">♫</button>
+  </main>
+  <script src="game.js"></script>
+</body>
+</html>
