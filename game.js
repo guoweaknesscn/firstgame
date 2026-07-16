@@ -25,7 +25,7 @@
   const side={x:1228,y:18,w:194,h:774};
 
   function reset(){
-    state={running:false, paused:false, muted:false, level:1, xp:0, need:30, energy:100, score:0, combo:0, selected:1, step:-1, beat:0, beatLength:60/126, enemies:[], shots:[], drops:[], xpOrbs:[], particles:[], flashes:[], shake:0, spawn:1.2, overdrive:0, enemySeq:0, buffHistory:[], cardCounts:[2,2,1,1,1,1], segmentCursors:[0,0,0,0], replacePulse:0, message:'CLICK A TRACK · CHOOSE A RHYTHM'};
+    state={running:false, paused:false, muted:false, level:1, xp:0, need:30, energy:100, score:0, combo:0, selected:1, step:-1, beat:0, beatLength:60/126, enemies:[], shots:[], drops:[], xpOrbs:[], particles:[], flashes:[], shake:0, spawn:1.2, overdrive:0, enemySeq:0, manualBeatKey:'', rhythmFeedback:null, buffHistory:[], cardCounts:[2,2,1,1,1,1], segmentCursors:[0,0,0,0], replacePulse:0, message:'CLICK A TRACK · CHOOSE A RHYTHM'};
     lanes.forEach((l,i)=>l.unlocked=i<2);
     stars=Array.from({length:80},()=>({x:25+Math.random()*1160,y:25+Math.random()*475,r:Math.random()*2.5,a:.12+Math.random()*.35}));
     motes=Array.from({length:18},()=>({x:Math.random()*1180,y:Math.random()*440,r:5+Math.random()*16,dx:-3+Math.random()*6,dy:-2+Math.random()*3}));
@@ -97,6 +97,7 @@
     if(step!==state.step){state.step=step;beat(step);}
     if(state.overdrive>0)state.overdrive-=dt;
     if(state.replacePulse>0)state.replacePulse-=dt;
+    if(state.rhythmFeedback){state.rhythmFeedback.life-=dt;if(state.rhythmFeedback.life<=0)state.rhythmFeedback=null;}
     state.spawn-=dt;if(state.spawn<=0){spawnEnemy();state.spawn=Math.max(.48,1.75-state.level*.075)*(Math.random()*.5+.75);}
     motes.forEach(m=>{m.x+=m.dx*dt;m.y+=m.dy*dt;if(m.x<30)m.x=1180;if(m.y<20)m.y=500;if(m.y>510)m.y=25;});
     state.enemies.forEach(e=>{e.phase+=dt*1.8;e.x+=e.vx*dt;if(e.x<45||e.x>stage.w-30)e.vx*=-1;e.y=Math.min(250,e.y+dt*(2+state.level*.28));e.shot-=dt;if(e.shot<0){enemyFire(e);e.shot=Math.max(.55,2.4-state.level*.06)+Math.random();}});
@@ -170,7 +171,7 @@
     }
     const l=lanes[state.selected],next=state.segmentCursors[state.selected]*4+1;ctx.fillStyle=l.color+'22';rr(1248,710,154,65,5);ctx.fill();ctx.strokeStyle=l.color;ctx.stroke();text(l.name,1325,731,22,'center',l.color);mono(`NEXT ${String(next).padStart(2,'0')}–${String(next+3).padStart(2,'0')}`,1325,756,11,'center','#d8dbe5');
   }
-  function drawFX(){state.xpOrbs.forEach(o=>{ctx.save();ctx.translate(o.x,o.y);ctx.rotate(o.phase);glow(C.cyan,16);ctx.fillStyle='#d9ffff';ctx.beginPath();ctx.moveTo(0,-o.r*1.8);ctx.lineTo(o.r,0);ctx.lineTo(0,o.r*1.8);ctx.lineTo(-o.r,0);ctx.closePath();ctx.fill();ctx.restore();});state.particles.forEach(p=>{ctx.globalAlpha=Math.max(0,p.life/p.max);glow(p.color,8);ctx.fillStyle=p.color;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,7);ctx.fill();});state.flashes.forEach(f=>{ctx.globalAlpha=f.life/.2;ctx.strokeStyle=f.color;ctx.lineWidth=3;ctx.beginPath();ctx.arc(f.x,f.y,f.r,0,7);ctx.stroke();});ctx.globalAlpha=1;ctx.shadowBlur=0;if(state.overdrive>0){ctx.strokeStyle=C.amber;ctx.lineWidth=5;ctx.strokeRect(7,7,W-14,H-14);mono('OVERDRIVE',1188,607,15,'right',C.amber);}}
+  function drawFX(){state.xpOrbs.forEach(o=>{ctx.save();ctx.translate(o.x,o.y);ctx.rotate(o.phase);glow(C.cyan,16);ctx.fillStyle='#d9ffff';ctx.beginPath();ctx.moveTo(0,-o.r*1.8);ctx.lineTo(o.r,0);ctx.lineTo(0,o.r*1.8);ctx.lineTo(-o.r,0);ctx.closePath();ctx.fill();ctx.restore();});state.particles.forEach(p=>{ctx.globalAlpha=Math.max(0,p.life/p.max);glow(p.color,8);ctx.fillStyle=p.color;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,7);ctx.fill();});state.flashes.forEach(f=>{ctx.globalAlpha=f.life/.2;ctx.strokeStyle=f.color;ctx.lineWidth=3;ctx.beginPath();ctx.arc(f.x,f.y,f.r,0,7);ctx.stroke();});ctx.globalAlpha=1;ctx.shadowBlur=0;if(state.rhythmFeedback){ctx.globalAlpha=Math.min(1,state.rhythmFeedback.life*3);glow(state.rhythmFeedback.color,18);text(state.rhythmFeedback.text,585,505,24,'center',state.rhythmFeedback.color);ctx.globalAlpha=1;}if(state.overdrive>0){ctx.strokeStyle=C.amber;ctx.lineWidth=5;ctx.strokeRect(7,7,W-14,H-14);mono('OVERDRIVE',1188,607,15,'right',C.amber);}}
 
   function hit(x,y){
     const sx=x*W/canvas.getBoundingClientRect().width, sy=y*H/canvas.getBoundingClientRect().height;
@@ -179,9 +180,13 @@
     if(sx>=1245&&sx<=1405&&sy>=100&&sy<692){const idx=Math.floor((sy-104)/98);if(idx>=0&&idx<cards.length&&state.cardCounts[idx]>0){const lane=state.selected,segment=state.segmentCursors[lane],start=segment*4;lanes[lane].pattern.splice(start,4,...cards[idx]);state.segmentCursors[lane]=(segment+1)%4;state.replacePulse=.35;state.cardCounts[idx]--;state.message=`${lanes[lane].name} · BEATS ${start+1}–${start+4} LOADED`;tone(260+idx*35,.13,'square',.05,120);burst(towerXs[lane],stage.y+stage.h-50,lanes[lane].color,14,160);}}
     if(sx>800&&sx<1130&&sy>555&&sy<640)overdrive();
   }
+  function manualRhythmShot(){
+    const exact=state.beat/state.beatLength,nearest=Math.round(exact),step=((nearest%16)+16)%16,lane=state.selected,delta=Math.abs(exact-nearest),key=`${Math.floor(nearest/16)}-${step}-${lane}`,track=lanes[lane];
+    if(delta<=.22&&step%4===0&&track.unlocked&&track.pattern[step]&&state.manualBeatKey!==key){state.manualBeatKey=key;fire(lane);state.rhythmFeedback={text:'BEAT HIT · +1 SHOT',color:track.color,life:.65};burst(towerXs[lane],stage.y+stage.h-52,track.color,8,120);}else{state.rhythmFeedback={text:'MISS',color:'#8990a5',life:.32};tone(72,.05,'square',.018,-20);}
+  }
   function overdrive(){if(state.energy>=28&&state.overdrive<=0){state.energy-=28;state.overdrive=4;for(let i=0;i<lanes.length;i++)if(lanes[i].unlocked)fire(i);tone(130,.4,'sawtooth',.08,520);}}
   canvas.addEventListener('pointerdown',e=>{if(!state.running)return;const r=canvas.getBoundingClientRect();hit(e.clientX-r.left,e.clientY-r.top);});
-  addEventListener('keydown',e=>{if(!state.running)return;if(e.code==='Space'){e.preventDefault();overdrive();}if(/^Digit[1-4]$/.test(e.code)){const i=Number(e.code.at(-1))-1;if(lanes[i]?.unlocked)state.selected=i;}});
+  addEventListener('keydown',e=>{if(!state.running||state.paused)return;if(e.code==='Space'){e.preventDefault();if(!e.repeat)manualRhythmShot();}if(e.code==='KeyE')overdrive();if(/^Digit[1-4]$/.test(e.code)){const i=Number(e.code.at(-1))-1;if(lanes[i]?.unlocked)state.selected=i;}});
   document.querySelector('#start').onclick=start;document.querySelector('#restart').onclick=start;document.querySelector('#mute').onclick=()=>{state.muted=!state.muted;document.querySelector('#mute').textContent=state.muted?'×':'♫';};document.querySelectorAll('[data-buff]').forEach(button=>button.addEventListener('click',()=>chooseBuff(button.dataset.buff)));
   function loop(t){if(!state.running)return;const dt=Math.min(.034,(t-last)/1000||0);last=t;if(!state.paused)update(dt);draw();requestAnimationFrame(loop);}
   draw();
