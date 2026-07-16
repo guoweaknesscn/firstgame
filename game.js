@@ -25,7 +25,7 @@
   const side={x:1228,y:18,w:194,h:774};
 
   function reset(){
-    state={running:false, paused:false, muted:false, level:1, xp:0, need:30, energy:100, score:0, combo:0, selected:1, step:-1, beat:0, beatLength:60/126, scanHold:0, scanCycle:0, enemies:[], shots:[], drops:[], xpOrbs:[], particles:[], flashes:[], shake:0, spawn:1.2, overdrive:0, enemySeq:0, manualBeatKeys:new Set(), rhythmFeedback:null, buffHistory:[], cardCounts:[2,2,1,1,1,1], segmentCursors:[0,0,0,0], replacePulse:0, message:'CLICK A TRACK · CHOOSE A RHYTHM'};
+    state={running:false, paused:false, muted:false, level:1, xp:0, need:30, energy:100, score:0, combo:0, selected:1, step:-1, beat:0, beatLength:60/126, scanHold:1, scanCycle:0, enemies:[], shots:[], drops:[], xpOrbs:[], particles:[], flashes:[], shake:0, spawn:1.2, overdrive:0, enemySeq:0, manualBeatKeys:new Set(), rhythmFeedback:null, buffHistory:[], cardCounts:[2,2,1,1,1,1], segmentCursors:[0,0,0,0], replacePulse:0, message:'CLICK A TRACK · CHOOSE A RHYTHM'};
     lanes.forEach((l,i)=>l.unlocked=i<2);
     stars=Array.from({length:80},()=>({x:25+Math.random()*1160,y:25+Math.random()*475,r:Math.random()*2.5,a:.12+Math.random()*.35}));
     motes=Array.from({length:18},()=>({x:Math.random()*1180,y:Math.random()*440,r:5+Math.random()*16,dx:-3+Math.random()*6,dy:-2+Math.random()*3}));
@@ -93,10 +93,9 @@
     state.buffHistory.push({level:state.level,id});document.querySelector('#buffSelect').classList.add('hidden');state.paused=false;tone(660,.16,'triangle',.055,260);if(state.xp>=state.need)levelUp();
   }
   function update(dt){
-    if(state.scanHold>0){state.scanHold-=dt;if(state.scanHold<=0){state.scanHold=0;state.beat=0;state.step=-1;state.scanCycle++;state.manualBeatKeys.clear();}}
-    else{state.beat+=dt;const scanEnd=15.5*state.beatLength;if(state.beat>=scanEnd){state.beat=scanEnd;state.scanHold=3;}}
-    const raw=Math.floor(state.beat/state.beatLength), step=raw%16;
-    if(step!==state.step){state.step=step;beat(step);}
+    if(state.scanHold>0){state.scanHold-=dt;if(state.scanHold<=0){state.scanHold=0;state.beat=0;state.step=-1;}}
+    else{state.beat+=dt;const scanEnd=15.5*state.beatLength;if(state.beat>=scanEnd){state.beat=0;state.step=-1;state.scanHold=1;state.scanCycle++;state.manualBeatKeys.clear();}}
+    if(state.scanHold<=0){const raw=Math.floor(state.beat/state.beatLength),step=raw%16;if(step!==state.step){state.step=step;beat(step);}}
     if(state.overdrive>0)state.overdrive-=dt;
     if(state.replacePulse>0)state.replacePulse-=dt;
     if(state.rhythmFeedback){state.rhythmFeedback.life-=dt;if(state.rhythmFeedback.life<=0)state.rhythmFeedback=null;}
@@ -161,7 +160,7 @@
       ctx.globalAlpha=1;
     }
     ctx.shadowBlur=0;ctx.strokeStyle='#68708688';ctx.lineWidth=1;for(let i=1;i<4;i++){const x=seq.x+i*seq.w/4;ctx.beginPath();ctx.moveTo(x,seq.y);ctx.lineTo(x,seq.y+seq.h-6);ctx.stroke();}
-    const px=state.scanHold>0?seq.x+seq.w:seq.x+((state.beat/state.beatLength)%16+.5)*seq.w/16;ctx.shadowBlur=0;ctx.strokeStyle='#f7f8fb';ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(px,seq.y-10);ctx.lineTo(px,seq.y+seq.h+4);ctx.stroke();ctx.fillStyle='#f7f8fb';ctx.beginPath();ctx.moveTo(px-11,seq.y-11);ctx.lineTo(px+11,seq.y-11);ctx.lineTo(px,seq.y+1);ctx.fill();if(state.scanHold>0)mono(`HOLD ${state.scanHold.toFixed(1)}s`,px-8,seq.y-24,11,'right',C.amber);
+    const px=state.scanHold>0?seq.x:seq.x+((state.beat/state.beatLength)%16+.5)*seq.w/16;ctx.shadowBlur=0;ctx.strokeStyle='#f7f8fb';ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(px,seq.y-10);ctx.lineTo(px,seq.y+seq.h+4);ctx.stroke();ctx.fillStyle='#f7f8fb';ctx.beginPath();ctx.moveTo(px-11,seq.y-11);ctx.lineTo(px+11,seq.y-11);ctx.lineTo(px,seq.y+1);ctx.fill();if(state.scanHold>0)mono(`HOLD ${state.scanHold.toFixed(1)}s`,px+8,seq.y-24,11,'left',C.amber);
   }
   function drawSide(){
     ctx.fillStyle='#3a3e4e';ctx.fillRect(side.x,0,W-side.x,H);ctx.strokeStyle='#777c8f';ctx.lineWidth=3;ctx.strokeRect(side.x+1,1,W-side.x-3,H-2);
