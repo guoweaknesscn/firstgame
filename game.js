@@ -25,7 +25,7 @@
   const side={x:1228,y:18,w:194,h:774};
 
   function reset(){
-    state={running:false, paused:false, muted:false, level:1, xp:0, need:30, energy:100, score:0, combo:0, selected:1, step:-1, beat:0, beatLength:60/126, scanHold:0, scanCycle:0, enemies:[], shots:[], drops:[], xpOrbs:[], particles:[], flashes:[], shake:0, spawn:1.2, overdrive:0, enemySeq:0, manualBeatKey:'', rhythmFeedback:null, buffHistory:[], cardCounts:[2,2,1,1,1,1], segmentCursors:[0,0,0,0], replacePulse:0, message:'CLICK A TRACK · CHOOSE A RHYTHM'};
+    state={running:false, paused:false, muted:false, level:1, xp:0, need:30, energy:100, score:0, combo:0, selected:1, step:-1, beat:0, beatLength:60/126, scanHold:0, scanCycle:0, enemies:[], shots:[], drops:[], xpOrbs:[], particles:[], flashes:[], shake:0, spawn:1.2, overdrive:0, enemySeq:0, manualBeatKeys:new Set(), rhythmFeedback:null, buffHistory:[], cardCounts:[2,2,1,1,1,1], segmentCursors:[0,0,0,0], replacePulse:0, message:'CLICK A TRACK · CHOOSE A RHYTHM'};
     lanes.forEach((l,i)=>l.unlocked=i<2);
     stars=Array.from({length:80},()=>({x:25+Math.random()*1160,y:25+Math.random()*475,r:Math.random()*2.5,a:.12+Math.random()*.35}));
     motes=Array.from({length:18},()=>({x:Math.random()*1180,y:Math.random()*440,r:5+Math.random()*16,dx:-3+Math.random()*6,dy:-2+Math.random()*3}));
@@ -93,7 +93,7 @@
     state.buffHistory.push({level:state.level,id});document.querySelector('#buffSelect').classList.add('hidden');state.paused=false;tone(660,.16,'triangle',.055,260);if(state.xp>=state.need)levelUp();
   }
   function update(dt){
-    if(state.scanHold>0){state.scanHold-=dt;if(state.scanHold<=0){state.scanHold=0;state.beat=0;state.step=-1;state.scanCycle++;}}
+    if(state.scanHold>0){state.scanHold-=dt;if(state.scanHold<=0){state.scanHold=0;state.beat=0;state.step=-1;state.scanCycle++;state.manualBeatKeys.clear();}}
     else{state.beat+=dt;const scanEnd=15.5*state.beatLength;if(state.beat>=scanEnd){state.beat=scanEnd;state.scanHold=3;}}
     const raw=Math.floor(state.beat/state.beatLength), step=raw%16;
     if(step!==state.step){state.step=step;beat(step);}
@@ -183,8 +183,9 @@
     if(sx>800&&sx<1130&&sy>555&&sy<640)overdrive();
   }
   function manualRhythmShot(){
-    const exact=state.beat/state.beatLength,nearest=Math.round(exact),step=((nearest%16)+16)%16,lane=state.selected,delta=Math.abs(exact-nearest),key=`${state.scanCycle}-${step}-${lane}`,track=lanes[lane];
-    if(state.scanHold<=0&&delta<=.22&&isLargeSolidBeat(track,step)&&state.manualBeatKey!==key){state.manualBeatKey=key;fire(lane);state.rhythmFeedback={text:'BEAT HIT · +1 SHOT',color:track.color,life:.65};burst(towerXs[lane],stage.y+stage.h-52,track.color,8,120);}else{state.rhythmFeedback={text:'MISS',color:'#8990a5',life:.32};tone(72,.05,'square',.018,-20);}
+    const exact=state.beat/state.beatLength,nearest=Math.round(exact),step=((nearest%16)+16)%16,delta=Math.abs(exact-nearest),ready=[];
+    if(state.scanHold<=0&&delta<=.22){lanes.forEach((track,lane)=>{const key=`${state.scanCycle}-${step}-${lane}`;if(isLargeSolidBeat(track,step)&&!state.manualBeatKeys.has(key))ready.push({track,lane,key});});}
+    if(ready.length){ready.forEach(({track,lane,key})=>{state.manualBeatKeys.add(key);fire(lane);burst(towerXs[lane],stage.y+stage.h-52,track.color,8,120);});state.rhythmFeedback={text:`BEAT HIT · +${ready.length} SHOT${ready.length>1?'S':''}`,color:C.white,life:.65};}else{state.rhythmFeedback={text:'MISS',color:'#8990a5',life:.32};tone(72,.05,'square',.018,-20);}
   }
   function overdrive(){if(state.energy>=28&&state.overdrive<=0){state.energy-=28;state.overdrive=4;for(let i=0;i<lanes.length;i++)if(lanes[i].unlocked)fire(i);tone(130,.4,'sawtooth',.08,520);}}
   canvas.addEventListener('pointerdown',e=>{if(!state.running)return;const r=canvas.getBoundingClientRect();hit(e.clientX-r.left,e.clientY-r.top);});
