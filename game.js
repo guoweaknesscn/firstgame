@@ -160,7 +160,7 @@
     for(let j=0;j<unlocked;j++){const l=lanes[j],y=top+j*rowH+rowH/2;ctx.globalAlpha=state.selected===j?1:.63;
       if(state.selected===j){const segment=state.segmentCursors[j],hx=seq.x+segment*seq.w/4;ctx.fillStyle=l.color+(state.replacePulse>0?'40':'20');ctx.fillRect(hx,y-rowH/2+2,seq.w/4,rowH-4);ctx.strokeStyle=l.color;ctx.lineWidth=1.5;ctx.strokeRect(hx+1,y-rowH/2+3,seq.w/4-2,rowH-6);}
       ctx.strokeStyle=l.color;ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(seq.x-25,y);ctx.lineTo(seq.x+seq.w+25,y);ctx.stroke();ctx.fillStyle=l.color;ctx.beginPath();ctx.moveTo(seq.x-25,y);ctx.lineTo(seq.x-5,y-9);ctx.lineTo(seq.x-5,y+9);ctx.fill();ctx.beginPath();ctx.moveTo(seq.x+seq.w+25,y);ctx.lineTo(seq.x+seq.w+5,y-9);ctx.lineTo(seq.x+seq.w+5,y+9);ctx.fill();
-      for(let i=0;i<16;i++){const x=seq.x+(i+.5)*seq.w/16,r=l.pattern[i]?(isLargeSolidBeat(l,i)?10:7):3;glow(l.color,l.pattern[i]?10:0);ctx.fillStyle=l.pattern[i]?l.color:'#30384a';ctx.beginPath();ctx.arc(x,y,r,0,7);ctx.fill();ctx.strokeStyle=l.color;ctx.lineWidth=2;ctx.stroke();}
+      for(let i=0;i<16;i++){const x=seq.x+(i+.5)*seq.w/16,active=!!l.pattern[i],large=isLargeSolidBeat(l,i),r=active?(large?13:5):3;glow(l.color,active?(large?20:6):0);ctx.fillStyle=active?l.color:'#30384a';ctx.beginPath();ctx.arc(x,y,r,0,7);ctx.fill();ctx.strokeStyle=l.color;ctx.lineWidth=large?3:1.5;ctx.stroke();if(large){ctx.globalAlpha=.45;ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(x,y,17,0,7);ctx.stroke();ctx.globalAlpha=state.selected===j?1:.63;}}
       ctx.globalAlpha=1;
     }
     ctx.shadowBlur=0;ctx.strokeStyle='#68708688';ctx.lineWidth=1;for(let i=1;i<4;i++){const x=seq.x+i*seq.w/4;ctx.beginPath();ctx.moveTo(x,seq.y);ctx.lineTo(x,seq.y+seq.h-6);ctx.stroke();}
