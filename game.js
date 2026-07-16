@@ -25,7 +25,7 @@
   const side={x:1228,y:18,w:194,h:774};
 
   function reset(){
-    state={running:false, muted:false, level:1, xp:0, need:30, energy:100, score:0, combo:0, selected:1, step:-1, beat:0, beatLength:60/126, enemies:[], shots:[], drops:[], particles:[], flashes:[], shake:0, spawn:1.2, overdrive:0, cardCounts:[2,2,1,1,1,1], segmentCursors:[0,0,0,0], replacePulse:0, message:'CLICK A TRACK · CHOOSE A RHYTHM'};
+    state={running:false, muted:false, level:1, xp:0, need:30, energy:100, score:0, combo:0, selected:1, step:-1, beat:0, beatLength:60/126, enemies:[], shots:[], drops:[], particles:[], flashes:[], shake:0, spawn:1.2, overdrive:0, enemySeq:0, cardCounts:[2,2,1,1,1,1], segmentCursors:[0,0,0,0], replacePulse:0, message:'CLICK A TRACK · CHOOSE A RHYTHM'};
     lanes.forEach((l,i)=>l.unlocked=i<2);
     stars=Array.from({length:80},()=>({x:25+Math.random()*1160,y:25+Math.random()*475,r:Math.random()*2.5,a:.12+Math.random()*.35}));
     motes=Array.from({length:18},()=>({x:Math.random()*1180,y:Math.random()*440,r:5+Math.random()*16,dx:-3+Math.random()*6,dy:-2+Math.random()*3}));
@@ -58,14 +58,14 @@
     const x=towerXs[i], y=stage.y+stage.h-30, l=lanes[i];
     const target=state.enemies.length?state.enemies.reduce((a,b)=>Math.abs(a.x-x)<Math.abs(b.x-x)?a:b):null;
     let ang=target?Math.atan2(target.y-y,target.x-x):-Math.PI/2+(.5-Math.random())*.34;
-    const speed=480+(state.overdrive>0?180:0);
-    state.shots.push({x,y,vx:Math.cos(ang)*speed,vy:Math.sin(ang)*speed,r:5,color:l.color,life:4,trail:[]});
-    state.flashes.push({x,y,r:10,color:l.color,life:.2});
-    burst(x,y-5,l.color,5,80); tone(l.sound,.07,'square',.035,70);
+    const laser=i===0, speed=(laser?920:480)+(state.overdrive>0?(laser?260:180):0);
+    state.shots.push({x,y,vx:Math.cos(ang)*speed,vy:Math.sin(ang)*speed,r:laser?3:5,color:l.color,life:laser?2.6:4,trail:[],kind:laser?'laser':'bolt',pierce:laser?3:1,hitIds:laser?new Set():null});
+    state.flashes.push({x,y,r:laser?18:10,color:l.color,life:laser?.28:.2});
+    burst(x,y-5,l.color,laser?9:5,laser?140:80); tone(laser?520:l.sound,laser?.11:.07,laser?'sawtooth':'square',laser?.05:.035,laser?420:70);
   }
   function spawnEnemy(){
     const x=70+Math.random()*(stage.w-140), elite=Math.random()<Math.min(.25,state.level*.018);
-    state.enemies.push({x,y:45+Math.random()*65,vx:(Math.random()<.5?-1:1)*(22+Math.random()*28),hp:elite?4:1+Math.floor(state.level/5),max:elite?4:1+Math.floor(state.level/5),r:elite?26:19,shot:.6+Math.random()*1.5,elite,phase:Math.random()*6.28});
+    state.enemies.push({uid:++state.enemySeq,x,y:45+Math.random()*65,vx:(Math.random()<.5?-1:1)*(22+Math.random()*28),hp:elite?4:1+Math.floor(state.level/5),max:elite?4:1+Math.floor(state.level/5),r:elite?26:19,shot:.6+Math.random()*1.5,elite,phase:Math.random()*6.28});
   }
   function enemyFire(e){
     const tx=towerXs[Math.floor(Math.random()*lanes.filter(l=>l.unlocked).length)],ty=stage.y+stage.h-15;
@@ -91,11 +91,11 @@
     state.spawn-=dt;if(state.spawn<=0){spawnEnemy();state.spawn=Math.max(.48,1.75-state.level*.075)*(Math.random()*.5+.75);}
     motes.forEach(m=>{m.x+=m.dx*dt;m.y+=m.dy*dt;if(m.x<30)m.x=1180;if(m.y<20)m.y=500;if(m.y>510)m.y=25;});
     state.enemies.forEach(e=>{e.phase+=dt*1.8;e.x+=e.vx*dt;if(e.x<45||e.x>stage.w-30)e.vx*=-1;e.y=Math.min(250,e.y+dt*(2+state.level*.28));e.shot-=dt;if(e.shot<0){enemyFire(e);e.shot=Math.max(.55,2.4-state.level*.06)+Math.random();}});
-    for(const s of state.shots){s.life-=dt;s.trail.push({x:s.x,y:s.y});if(s.trail.length>9)s.trail.shift();s.x+=s.vx*dt;s.y+=s.vy*dt;if(s.x<stage.x+8||s.x>stage.x+stage.w-8){s.vx*=-1;s.x=Math.max(stage.x+8,Math.min(stage.x+stage.w-8,s.x));}if(s.y<stage.y+8){s.vy=Math.abs(s.vy);s.y=stage.y+8;}}
+    for(const s of state.shots){s.life-=dt;s.trail.push({x:s.x,y:s.y});const trailLimit=s.kind==='laser'?22:9;if(s.trail.length>trailLimit)s.trail.shift();s.x+=s.vx*dt;s.y+=s.vy*dt;if(s.x<stage.x+8||s.x>stage.x+stage.w-8){s.vx*=-1;s.x=Math.max(stage.x+8,Math.min(stage.x+stage.w-8,s.x));if(s.kind==='laser'){burst(s.x,s.y,s.color,4,70);tone(760,.035,'sine',.018,-120);}}if(s.y<stage.y+8){s.vy=Math.abs(s.vy);s.y=stage.y+8;if(s.kind==='laser'){burst(s.x,s.y,s.color,4,70);tone(760,.035,'sine',.018,-120);}}}
     for(const d of state.drops){d.life-=dt;d.x+=d.vx*dt;d.y+=d.vy*dt;}
     for(const p of state.particles){p.life-=dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.vx*=.97;p.vy*=.97;}
     for(const f of state.flashes){f.life-=dt;f.r+=dt*120;}
-    for(let si=state.shots.length-1;si>=0;si--){const s=state.shots[si];for(let ei=state.enemies.length-1;ei>=0;ei--){const e=state.enemies[ei];if((s.x-e.x)**2+(s.y-e.y)**2<(s.r+e.r)**2){e.hp--;burst(s.x,s.y,s.color,7,120);state.shots.splice(si,1);if(e.hp<=0){burst(e.x,e.y,e.elite?C.pink:C.amber,18,230);state.enemies.splice(ei,1);gainXP(e.elite?8:3);tone(e.elite?95:140,.12,'sawtooth',.045,-80);}break;}}}
+    for(let si=state.shots.length-1;si>=0;si--){const s=state.shots[si];let consumed=false;for(let ei=state.enemies.length-1;ei>=0;ei--){const e=state.enemies[ei];if(s.hitIds?.has(e.uid))continue;if((s.x-e.x)**2+(s.y-e.y)**2<(s.r+e.r)**2){e.hp--;burst(s.x,s.y,s.color,s.kind==='laser'?12:7,s.kind==='laser'?190:120);if(s.kind==='laser'){s.hitIds.add(e.uid);s.pierce--;if(s.pierce<=0){state.shots.splice(si,1);consumed=true;}}else{state.shots.splice(si,1);consumed=true;}if(e.hp<=0){burst(e.x,e.y,e.elite?C.pink:C.amber,18,230);state.enemies.splice(ei,1);gainXP(e.elite?8:3);tone(e.elite?95:140,.12,'sawtooth',.045,-80);}else if(s.kind==='laser')tone(880,.045,'square',.025,-260);if(consumed)break;}}}
     for(let i=state.drops.length-1;i>=0;i--){const d=state.drops[i];if(d.y>stage.y+stage.h-32){state.drops.splice(i,1);state.energy-=d.r>5?9:5;state.combo=0;state.shake=9;burst(d.x,stage.y+stage.h-25,d.color,12,180);tone(70,.18,'sawtooth',.06,-35);}}
     state.shots=state.shots.filter(s=>s.life>0&&s.y<stage.y+stage.h+20);state.drops=state.drops.filter(d=>d.life>0);state.particles=state.particles.filter(p=>p.life>0);state.flashes=state.flashes.filter(f=>f.life>0);state.shake*=.86;
     if(state.energy<=0){state.energy=0;state.running=false;document.querySelector('#finalScore').textContent=`抵达 LEVEL ${state.level} · 得分 ${String(state.score).padStart(6,'0')}`;document.querySelector('#gameover').classList.remove('hidden');}
@@ -128,7 +128,7 @@
   function drawTower(i){
     const l=lanes[i],x=towerXs[i],y=stage.y+stage.h-30,active=state.selected===i;ctx.save();ctx.translate(x,y);if(active){glow(l.color,28);ctx.fillStyle=l.color+'25';ctx.beginPath();ctx.arc(0,0,54,0,7);ctx.fill();}glow(l.color,16);ctx.fillStyle='#62687c';ctx.beginPath();ctx.moveTo(-17,0);ctx.lineTo(-14,-34);ctx.lineTo(-6,-34);ctx.lineTo(-6,-43);ctx.lineTo(0,-39);ctx.lineTo(6,-43);ctx.lineTo(6,-34);ctx.lineTo(14,-34);ctx.lineTo(17,0);ctx.fill();ctx.fillStyle='#22263a';ctx.fillRect(-10,-27,20,19);ctx.fillStyle=l.color;ctx.fillRect(-5,-22,10,10);ctx.restore();
   }
-  function drawShot(s){ctx.save();ctx.lineCap='round';for(let i=1;i<s.trail.length;i++){ctx.globalAlpha=i/s.trail.length*.5;ctx.strokeStyle=s.color;ctx.lineWidth=1+i/3;ctx.beginPath();ctx.moveTo(s.trail[i-1].x,s.trail[i-1].y);ctx.lineTo(s.trail[i].x,s.trail[i].y);ctx.stroke();}ctx.globalAlpha=1;glow(s.color,18);ctx.fillStyle=s.color;ctx.beginPath();ctx.moveTo(s.x,s.y-10);ctx.quadraticCurveTo(s.x+8,s.y,s.x,s.y+9);ctx.quadraticCurveTo(s.x-7,s.y,s.x,s.y-10);ctx.fill();ctx.restore();}
+  function drawShot(s){ctx.save();ctx.lineCap='round';if(s.kind==='laser'){const pts=[...s.trail,{x:s.x,y:s.y}];glow(s.color,22);ctx.globalAlpha=.38;ctx.strokeStyle=s.color;ctx.lineWidth=10;ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.stroke();ctx.globalAlpha=.9;ctx.strokeStyle=s.color;ctx.lineWidth=4;ctx.stroke();ctx.globalAlpha=1;ctx.strokeStyle='#fffbd2';ctx.lineWidth=1.5;ctx.stroke();ctx.fillStyle='#fffbd2';glow(s.color,28);ctx.beginPath();ctx.arc(s.x,s.y,4.5,0,7);ctx.fill();ctx.restore();return;}for(let i=1;i<s.trail.length;i++){ctx.globalAlpha=i/s.trail.length*.5;ctx.strokeStyle=s.color;ctx.lineWidth=1+i/3;ctx.beginPath();ctx.moveTo(s.trail[i-1].x,s.trail[i-1].y);ctx.lineTo(s.trail[i].x,s.trail[i].y);ctx.stroke();}ctx.globalAlpha=1;glow(s.color,18);ctx.fillStyle=s.color;ctx.beginPath();ctx.moveTo(s.x,s.y-10);ctx.quadraticCurveTo(s.x+8,s.y,s.x,s.y+9);ctx.quadraticCurveTo(s.x-7,s.y,s.x,s.y-10);ctx.fill();ctx.restore();}
   function drawDrop(d){ctx.save();glow(d.color,16);ctx.fillStyle=d.color;ctx.beginPath();ctx.moveTo(d.x,d.y-d.r*1.8);ctx.quadraticCurveTo(d.x+d.r,d.y,d.x,d.y+d.r*1.3);ctx.quadraticCurveTo(d.x-d.r,d.y,d.x,d.y-d.r*1.8);ctx.fill();ctx.restore();}
   function drawConsole(){
     const y=535;ctx.fillStyle=C.panel;ctx.fillRect(0,y,1220,H-y);ctx.strokeStyle='#7b8092';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(410,y);ctx.lineTo(438,584);ctx.lineTo(735,584);ctx.lineTo(763,y);ctx.lineTo(1220,y);ctx.stroke();
