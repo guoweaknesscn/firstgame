@@ -91,7 +91,7 @@
     state.spawn-=dt;if(state.spawn<=0){spawnEnemy();state.spawn=Math.max(.48,1.75-state.level*.075)*(Math.random()*.5+.75);}
     motes.forEach(m=>{m.x+=m.dx*dt;m.y+=m.dy*dt;if(m.x<30)m.x=1180;if(m.y<20)m.y=500;if(m.y>510)m.y=25;});
     state.enemies.forEach(e=>{e.phase+=dt*1.8;e.x+=e.vx*dt;if(e.x<45||e.x>stage.w-30)e.vx*=-1;e.y=Math.min(250,e.y+dt*(2+state.level*.28));e.shot-=dt;if(e.shot<0){enemyFire(e);e.shot=Math.max(.55,2.4-state.level*.06)+Math.random();}});
-    for(const s of state.shots){s.life-=dt;s.trail.push({x:s.x,y:s.y});const trailLimit=s.kind==='laser'?22:9;if(s.trail.length>trailLimit)s.trail.shift();s.x+=s.vx*dt;s.y+=s.vy*dt;if(s.x<stage.x+8||s.x>stage.x+stage.w-8){s.vx*=-1;s.x=Math.max(stage.x+8,Math.min(stage.x+stage.w-8,s.x));if(s.kind==='laser'){burst(s.x,s.y,s.color,4,70);tone(760,.035,'sine',.018,-120);}}if(s.y<stage.y+8){s.vy=Math.abs(s.vy);s.y=stage.y+8;if(s.kind==='laser'){burst(s.x,s.y,s.color,4,70);tone(760,.035,'sine',.018,-120);}}}
+    for(const s of state.shots){s.life-=dt;s.trail.push({x:s.x,y:s.y});const trailLimit=s.kind==='laser'?7:9;if(s.trail.length>trailLimit)s.trail.shift();s.x+=s.vx*dt;s.y+=s.vy*dt;if(s.x<stage.x+8||s.x>stage.x+stage.w-8){s.vx*=-1;s.x=Math.max(stage.x+8,Math.min(stage.x+stage.w-8,s.x));if(s.kind==='laser'){burst(s.x,s.y,s.color,4,70);tone(760,.035,'sine',.018,-120);}}if(s.y<stage.y+8){s.vy=Math.abs(s.vy);s.y=stage.y+8;if(s.kind==='laser'){burst(s.x,s.y,s.color,4,70);tone(760,.035,'sine',.018,-120);}}}
     for(const d of state.drops){d.life-=dt;d.x+=d.vx*dt;d.y+=d.vy*dt;}
     for(const p of state.particles){p.life-=dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.vx*=.97;p.vy*=.97;}
     for(const f of state.flashes){f.life-=dt;f.r+=dt*120;}
